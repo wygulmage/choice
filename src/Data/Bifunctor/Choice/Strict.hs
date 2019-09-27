@@ -5,7 +5,10 @@
   , TypeOperators
   #-}
 
-module Data.Bifunctor.Choice.Strict where
+module Data.Bifunctor.Choice.Strict
+   ( type (!!), makeL, makeR, match
+   )
+   where
 
 import Choice.Internal.Class.Choice
 import Choice.Internal.Class.Match

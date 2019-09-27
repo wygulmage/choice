@@ -5,7 +5,10 @@
   , TypeOperators
   #-}
 
-module Data.Bifunctor.Choice.Lazy where
+module Data.Bifunctor.Choice.Lazy
+   ( type (||), makeL, makeR, match
+   )
+   where
 
 import Prelude (Read, Show)
 import Choice.Internal.Class.Choice
