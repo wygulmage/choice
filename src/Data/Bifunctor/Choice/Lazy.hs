@@ -22,11 +22,13 @@ import Data.Foldable (Foldable (foldMap, foldl, foldr))
 import Data.Bitraversable (Bitraversable (bitraverse))
 import Data.Traversable (Traversable (traverse))
 
+import Data.Either (Either (Left, Right))
 import Data.Function (flip)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic, Generic1)
 
-data a || b = L a | R b
+-- data a || b = L a | R b
+newtype a || b = Choice{ getChoice :: Either a b }
    deriving (Generic, Generic1, Read, Show, Typeable)
 infixr 2 ||
 
@@ -37,14 +39,14 @@ instance Bifunctor (||) where
    first = firstDefault
 
 instance Choice (||) where
-   makeL = L
-   makeR = R
+   makeL = Choice . Left
+   makeR = Choice . Right
 
 instance Match (||) where
-   match f g = go
+   match f g = go . getChoice
       where
-      go (L x) = f x
-      go (R y) = g y
+      go (Left x) = f x
+      go (Right y) = g y
 
 instance Monad ((||) c) where
    (>>=) = flip bindDefault

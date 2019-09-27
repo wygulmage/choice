@@ -9,7 +9,7 @@ module Choice.Internal.Class.Match where
 
 import Choice.Internal.Class.Choice
 import Control.Applicative (Applicative (pure))
-import Control.Category ((.), id)
+import Control.Category (Category ((.), id))
 import Data.Functor (Functor (fmap))
 import Data.Semigroup (Semigroup ((<>)))
 import Data.Monoid (Monoid (mempty))
@@ -63,7 +63,7 @@ semigroupDefault ::
 -- Prefer b.
 semigroupDefault = match
    (firstDefault . (<>))
-   (\ x -> makeR . foldlDefault (<>) x)
+   (makeR .: foldlDefault (<>))
 
 --- Monoid:
 memptyDefault :: (Choice or, Monoid a) => a `or` b
@@ -101,3 +101,35 @@ bitraverseDefault ::
    (Match p, Choice q, Applicative m) =>
    (a -> m b) -> (c -> m d) -> p a c -> m (q b d)
 bitraverseDefault f g = match (fmap makeL . f) (fmap makeR . g)
+
+----- Utility Functions -----
+(.:) :: (Category f) => c `f` d -> (a -> b `f` c) -> a -> b `f` d
+(.:) = (.) . (.)
+
+----- Rules -----
+
+-- (.) :: (b -> c) -> (a -> b) -> (a -> c)
+-- f . g = \ x -> f (g x)
+-- {-# INLINE [0] (.) #-}
+
+-- id :: a -> a
+-- id x = x
+-- {-# INLINE [0] id #-}
+
+-- match_RULE :: (Match or) => (a -> c) -> (b -> c) -> a `or` b -> c
+-- match_RULE = match
+-- {-# INLINE [0] match_RULE #-}
+
+-- {-# RULES
+--   "Don't inline match early." [~0]
+--   match = match_RULE
+--   ;
+--   "match inL"
+--   forall f g x. match_RULE f g (makeL_RULE x) = f x
+--   ;
+--   "match inR"
+--   forall f g x. match_RULE f g (makeR_RULE x) = g x
+--   ;
+--   "match after match"
+--   forall f g h i x. match_RULE f g (match_RULE (makeL_RULE . h) (makeR_RULE . i) x) = match_RULE (f . h) (g . i) x
+--   #-}
