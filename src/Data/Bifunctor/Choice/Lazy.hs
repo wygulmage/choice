@@ -11,8 +11,8 @@ module Data.Bifunctor.Choice.Lazy
    where
 
 import Prelude (Read, Show)
-import Choice.Internal.Class.Choice
-import Choice.Internal.Class.Match
+import Bichoice.Internal.Class.Choice
+import Bichoice.Internal.Class.Match
 import Control.Applicative (Applicative ((<*>), pure))
 import Control.Category ((.), id)
 import Control.Monad (Monad ((>>=)))

@@ -5,10 +5,13 @@
   , TypeOperators
   #-}
 
-module Data.Bifunctor.Choice.LeftStrict where
+module Data.Bifunctor.Choice.LeftStrict
+   ( type (!|), makeL, makeR, match
+   )
+   where
 
-import Choice.Internal.Class.Choice
-import Choice.Internal.Class.Match
+import Bichoice.Internal.Class.Choice
+import Bichoice.Internal.Class.Match
 import Prelude (Eq ((==)), Ord (compare), Read, Show, seq)
 import Control.Applicative (Applicative ((<*>), pure))
 import Control.Category ((.), id)

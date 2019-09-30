@@ -10,8 +10,8 @@ module Data.Bifunctor.Choice.Strict
    )
    where
 
-import Choice.Internal.Class.Choice
-import Choice.Internal.Class.Match
+import Bichoice.Internal.Class.Choice
+import Bichoice.Internal.Class.Match
 import Prelude (Eq ((==)), Ord (compare), Read, Show)
 import Control.Applicative (Applicative ((<*>), pure))
 import Control.Category ((.), id)

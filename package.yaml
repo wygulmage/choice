@@ -1,4 +1,4 @@
-name:                choice
+name:                bichoice
 version:             0.1.0.0
 github:              "githubuser/choice"
 license:             PublicDomain
@@ -34,4 +34,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - choice
+    - bichoice
