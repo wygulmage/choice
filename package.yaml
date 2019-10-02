@@ -26,7 +26,7 @@ library:
   source-dirs: src
 
 tests:
-  choice-test:
+  bichoice-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -35,3 +35,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - bichoice
+    - QuickCheck

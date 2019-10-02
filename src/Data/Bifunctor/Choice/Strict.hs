@@ -12,7 +12,7 @@ module Data.Bifunctor.Choice.Strict
 
 import Bichoice.Internal.Class.Choice
 import Bichoice.Internal.Class.Match
-import Prelude (Eq ((==)), Ord (compare), Read, Show)
+import Prelude (Eq ((==)), Ord (compare), Read, Show, seq)
 import Control.Applicative (Applicative ((<*>), pure))
 import Control.Category ((.), id)
 import Control.Monad (Monad ((>>=)))
@@ -27,10 +27,12 @@ import Data.Traversable (Traversable (traverse))
 import Data.Bitraversable (Bitraversable (bitraverse))
 import Data.Typeable (Typeable)
 
+import Data.Either (Either (Left, Right))
 import Data.Function (flip)
 
 
-data a !! b = StrictL !a | StrictR !b
+-- data a !! b = StrictL !a | StrictR !b
+newtype a !! b = Strict{ getStrict :: Either a b }
    deriving (Read, Show, Typeable)
 infixr 2 !!
 
@@ -41,14 +43,18 @@ instance Bifunctor (!!) where
    first = firstDefault
 
 instance Choice (!!) where
-   makeL = StrictL
-   makeR = StrictR
+   makeL x = seq x (Strict (Left x))
+   makeR x = seq x (Strict (Right x))
+   -- makeL = StrictL
+   -- makeR = StrictR
 
 instance Match (!!) where
-   match f g = go
+   match f g = go . getStrict
       where
-      go (StrictL x) = f x
-      go (StrictR y) = g y
+      go (Left x) = f x
+      go (Right y) = g y
+      -- go (StrictL x) = f x
+      -- go (StrictR y) = g y
 
 instance Applicative ((!!) c) where
    pure = makeR

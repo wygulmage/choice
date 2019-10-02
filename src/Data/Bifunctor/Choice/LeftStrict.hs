@@ -32,7 +32,7 @@ import Data.Function (flip)
 
 
 -- data a !| b = StrictL !a | LazyR b
-newtype a !| b = StrictLeft{ getStrictLeft :: Either a b}
+newtype a !| b = LeftStrict{ getLeftStrict :: Either a b}
    deriving (Read, Show, Typeable)
 infixr 2 !|
 
@@ -43,11 +43,11 @@ instance Bifunctor (!|) where
    first = firstDefault
 
 instance Choice (!|) where
-   makeL x = x `seq` StrictLeft (Left x)
-   makeR = StrictLeft . Right
+   makeL x = x `seq` LeftStrict (Left x)
+   makeR = LeftStrict . Right
 
 instance Match (!|) where
-   match f g = go . getStrictLeft
+   match f g = go . getLeftStrict
       where
       go (Left x) = f x
       go (Right y) = g y

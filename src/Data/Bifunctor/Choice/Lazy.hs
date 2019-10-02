@@ -10,7 +10,7 @@ module Data.Bifunctor.Choice.Lazy
    )
    where
 
-import Prelude (Read, Show)
+import Prelude (Eq ((==)), Read, Show (show))
 import Bichoice.Internal.Class.Choice
 import Bichoice.Internal.Class.Match
 import Control.Applicative (Applicative ((<*>), pure))
@@ -32,8 +32,13 @@ import GHC.Generics (Generic, Generic1)
 
 -- data a || b = L a | R b
 newtype a || b = Choice{ getChoice :: Either a b }
-   deriving (Generic, Generic1, Read, Show, Typeable)
+   deriving (Generic, Generic1, Read, Typeable)
 infixr 2 ||
+
+instance (Show a, Show b) => Show (a || b) where
+  show = match (("makeL" <>) . show) (("makeR" <>) . show)
+
+instance (Eq a, Eq b) => Eq (a || b) where (==) = liftEq2Default (==) (==)
 
 instance Functor ((||) c) where fmap = fmapDefault
 
