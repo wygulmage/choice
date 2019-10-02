@@ -1,6 +1,7 @@
 {-# LANGUAGE
     NoImplicitPrelude
   , DeriveGeneric
+  , PatternSynonyms
   , QuantifiedConstraints
   , TypeOperators
   #-}
@@ -84,3 +85,11 @@ instance Traversable ((||) c) where
 
 instance Bitraversable (||) where
    bitraverse = bitraverseDefault
+
+
+-----
+
+type Maybe a = () || a
+pattern Nothing :: Maybe a
+pattern Nothing = Choice (Left ())
+pattern Just x = Choice (Right x)
