@@ -72,4 +72,4 @@ type (||) = ChoiceT Lazy
 type (!!) = ChoiceT Strict
 ```
 
-Finally, make sure that you aren't exporting any constructors or destructors except those provided by the class. (To avoid violation of strictness properties. Yes, you can still use `coerce` to do that. `coerce` is not safe.)
+Finally, make sure that you aren't exporting any constructors or destructors except those provided by the class (to avoid violation of strictness properties. Yes, you can still use `coerce` to do that.`coerce` is not safe).

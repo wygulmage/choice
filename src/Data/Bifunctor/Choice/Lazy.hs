@@ -11,85 +11,87 @@ module Data.Bifunctor.Choice.Lazy
    )
    where
 
-import Prelude (Eq ((==)), Read, Show (show))
-import Bichoice.Internal.Class.Choice
-import Bichoice.Internal.Class.Match
-import Control.Applicative (Applicative ((<*>), pure))
-import Control.Category ((.), id)
-import Control.Monad (Monad ((>>=)))
-import Data.Bifunctor (Bifunctor (bimap, first))
-import Data.Functor (Functor (fmap))
-import Data.Semigroup (Semigroup ((<>)))
-import Data.Monoid (Monoid (mempty))
-import Data.Bifoldable (Bifoldable (bifoldMap, bifoldl, bifoldr))
-import Data.Foldable (Foldable (foldMap, foldl, foldr))
-import Data.Bitraversable (Bitraversable (bitraverse))
-import Data.Traversable (Traversable (traverse))
+import Bichoice.Internal.Choice
 
-import Data.Either (Either (Left, Right))
-import Data.Function (flip)
-import Data.Typeable (Typeable)
-import GHC.Generics (Generic, Generic1)
+-- import Prelude (Eq ((==)), Read, Show (show))
+-- import Bichoice.Internal.Class.Choice
+-- import Bichoice.Internal.Class.Match
+-- import Control.Applicative (Applicative ((<*>), pure))
+-- import Control.Category ((.), id)
+-- import Control.Monad (Monad ((>>=)))
+-- import Data.Bifunctor (Bifunctor (bimap, first))
+-- import Data.Functor (Functor (fmap))
+-- import Data.Semigroup (Semigroup ((<>)))
+-- import Data.Monoid (Monoid (mempty))
+-- import Data.Bifoldable (Bifoldable (bifoldMap, bifoldl, bifoldr))
+-- import Data.Foldable (Foldable (foldMap, foldl, foldr))
+-- import Data.Bitraversable (Bitraversable (bitraverse))
+-- import Data.Traversable (Traversable (traverse))
 
--- data a || b = L a | R b
-newtype a || b = Choice{ getChoice :: Either a b }
-   deriving (Generic, Generic1, Read, Typeable)
-infixr 2 ||
+-- import Data.Either (Either (Left, Right))
+-- import Data.Function (flip)
+-- import Data.Typeable (Typeable)
+-- import GHC.Generics (Generic, Generic1)
 
-instance (Show a, Show b) => Show (a || b) where
-  show = match (("makeL" <>) . show) (("makeR" <>) . show)
+-- -- data a || b = L a | R b
+-- newtype a || b = Choice{ getChoice :: Either a b }
+--    deriving (Generic, Generic1, Read, Typeable)
+-- infixr 2 ||
 
-instance (Eq a, Eq b) => Eq (a || b) where (==) = liftEq2Default (==) (==)
+-- instance (Show a, Show b) => Show (a || b) where
+--   show = match (("makeL" <>) . show) (("makeR" <>) . show)
 
-instance Functor ((||) c) where fmap = fmapDefault
+-- instance (Eq a, Eq b) => Eq (a || b) where (==) = liftEq2Default (==) (==)
 
-instance Bifunctor (||) where
-   bimap = bimapDefault
-   first = firstDefault
+-- instance Functor ((||) c) where fmap = fmapDefault
 
-instance Choice (||) where
-   makeL = Choice . Left
-   makeR = Choice . Right
+-- instance Bifunctor (||) where
+--    bimap = bimapDefault
+--    first = firstDefault
 
-instance Match (||) where
-   match f g = go . getChoice
-      where
-      go (Left x) = f x
-      go (Right y) = g y
+-- instance Choice (||) where
+--    makeL = Choice . Left
+--    makeR = Choice . Right
 
-instance Monad ((||) c) where
-   (>>=) = flip bindDefault
+-- instance Match (||) where
+--    match f g = go . getChoice
+--       where
+--       go (Left x) = f x
+--       go (Right y) = g y
 
-instance Applicative ((||) c) where
-   pure = makeR
-   (<*>) = apDefault
+-- instance Monad ((||) c) where
+--    (>>=) = flip bindDefault
 
-instance (Semigroup a, Semigroup b) => Semigroup (a || b) where
-   (<>) = semigroupDefault
+-- instance Applicative ((||) c) where
+--    pure = makeR
+--    (<*>) = apDefault
 
-instance (Monoid a, Semigroup b) => Monoid (a || b) where
-   mempty = memptyDefault
+-- instance (Semigroup a, Semigroup b) => Semigroup (a || b) where
+--    (<>) = semigroupDefault
 
-instance Foldable ((||) c_) where
-   foldMap = foldMapDefault
-   foldl = foldlDefault
-   foldr = foldrDefault
+-- instance (Monoid a, Semigroup b) => Monoid (a || b) where
+--    mempty = memptyDefault
 
-instance Bifoldable (||) where
-   bifoldMap = match
-   bifoldl = bifoldlDefault
-   bifoldr = bifoldrDefault
+-- instance Foldable ((||) c_) where
+--    foldMap = foldMapDefault
+--    foldl = foldlDefault
+--    foldr = foldrDefault
 
-instance Traversable ((||) c) where
-   traverse = traverseDefault
+-- instance Bifoldable (||) where
+--    bifoldMap = match
+--    bifoldl = bifoldlDefault
+--    bifoldr = bifoldrDefault
 
-instance Bitraversable (||) where
-   bitraverse = bitraverseDefault
+-- instance Traversable ((||) c) where
+--    traverse = traverseDefault
+
+-- instance Bitraversable (||) where
+--    bitraverse = bitraverseDefault
 
 
------
+-- -----
 
-type Maybe a = () || a
-pattern Nothing :: Maybe a
-pattern Nothing = Choice (Left ())
-pattern Just x = Choice (Right x)
+-- type Maybe a = () || a
+-- pattern Nothing :: Maybe a
+-- pattern Nothing = Choice (Left ())
+-- pattern Just x = Choice (Right x)
