@@ -13,6 +13,9 @@ module Bichoice.Internal.Choice
    )
    where
 
+import Prelude (Eq ((==)), Ord (compare), Bool (..), Ordering (..), flip, seq)
+import Control.Category ((.), id)
+import Data.Functor.Classes (Eq2 (liftEq2), Ord2 (liftCompare2))
 -- Semigroup classes
 import Data.Semigroup (Semigroup ((<>)))
 import Data.Monoid (Monoid (mempty))
@@ -33,12 +36,31 @@ import Data.Coerce (Coercible, coerce)
 ----- Class -----
 
 class Choice or where
-   makeL :: a → a  `or` b_
-   makeR :: b → a_ `or` b
-   match :: (a → c) → (b → c) → a `or` b → c
+   makeL :: a → a `or` b
+   default makeL :: Coercible Either or => a -> a `or` b
+   makeL = (coerce :: Either a b -> a `or` b) . Left
 
+   makeR :: b → a `or` b
+   default makeR :: Coercible Either or => b → a `or` b
+   makeR = (coerce :: Either a b -> a `or` b) . Right
+
+   match :: (a → c) → (b → c) → a `or` b → c
    default match :: Coercible Either or => (a → c) → (b → c) → a `or` b → c
    match f g = either f g . coerce
+
+   -- changeL :: (a -> a `or` c) -> a `or` c -> a `or` c
+   -- default changeL :: Coercible Either or => (a -> a `or` c) -> a `or` c -> a `or` c
+   -- changeL f = go . (coerce :: a `or` c -> Either a c)
+   --    where
+   --    go (Left x) = f x
+   --    go rx = coerce rx
+
+   -- changeR :: (a -> c `or` a) -> c `or` a -> c `or` a
+   -- default changeR :: Coercible Either or => (a -> c `or` a) -> c `or` a -> c `or` a
+   -- changeR f = go . (coerce :: c `or` a -> Either c a)
+   --    where
+   --    go (Right x) = f x
+   --    go lx = coerce lx
 
 ----- Types -----
 
@@ -50,7 +72,7 @@ newtype LeftStrict a b = LeftStrict{ getLeftStrict :: Either a b }
 
 newtype RightStrict a b = RightStrict{ getRightStrict :: Either a b }
 
-newtype Choose or a b = Choose{ getChoice :: Choice or => a `or` b }
+newtype Choose or a b = Choose{ getChoice :: a `or` b }
 
 type (||) = Choose Lazy
 type (!!) = Choose Strict
@@ -65,62 +87,120 @@ strictLeft x = seq x (Left x)
 strictRight :: b -> Either a b
 strictRight x = seq x (Right x)
 
-bind :: Choice or => (a → c `or` b) → c `or` a → c `or` b
-bind = match makeL
+fromL :: Choice or => c -> (a -> c) -> a `or` b_ -> c
+fromL z f = match f (pure z)
+
+fromR :: Choice or => c -> (b -> c) -> a_ `or` b -> c
+fromR = match . pure -- AKA 'maybe'
+
+match2 ::
+  (Choice or1, Choice or2) =>
+  (a → b → c) → -- Combine Ls.
+  (a → e → c) → -- Combine L R.
+  (d → b → c) → -- Combine R L.
+  (d → e → c) → -- Combine Rs.
+  a `or1` d → b `or2` e → c
+match2 fab fae fdb fde = match (bifoldlDefault fab fae) (bifoldlDefault fdb fde)
+
+both :: (Choice or1, Choice or2) => c -> c -> (a -> b -> c) -> (d -> e -> c) -> a `or1` d -> b `or2` e -> c
+both x y f = match2 f (pure (pure x)) (pure (pure y))
 
 (.:) :: (c → d) → (a → b → c) → a → b → d
 (.:) = (.) . (.)
+
+----- Generalized Specialized Methods -----
+
+bifoldlDefault :: Choice or => (c → a → d) → (c → b → d) → c → a `or` b → d
+-- More liberal type than bifoldl.
+bifoldlDefault f g z = match (f z) (g z)
+
+foldlDefault :: Choice or => (c -> b -> c) -> c -> a `or` b -> c
+foldlDefault = bifoldlDefault pure
+
+bind :: (Choice or1, Choice or2) => (a → c `or2` b) → c `or1` a → c `or2` b
+bind = match makeL
+
+fmapDefault :: (Choice or1, Choice or2) => (a -> b) -> c `or1` a -> c `or2` b
+fmapDefault f = bind (makeR . f)
+
+zipLBy ::
+   (Choice or1, Choice or2, Choice or3) =>
+   (a -> b -> c) -> (d -> d -> d) -> a `or1` d -> b `or2` d -> c `or3` d
+-- If you have a left and a right, return the right.
+-- If you have two lefts, combine them with f.
+-- If you have two rights, combine them in order with g.
+zipLBy f g = match (\ x -> match (makeL . f x) makeR) (makeR .: foldlDefault g)
+
+zipRBy ::
+   (Choice or1, Choice or2, Choice or3) =>
+   (d -> d -> d) -> (a -> b -> c) -> d `or1` a -> d `or2` b -> d `or3` c
+-- If you have a left and a right, return the left.
+-- If you have two lefts, combine them in order with f.
+-- If you have two rights, combine them with g.
+zipRBy f g = match (\ x -> makeL . bifoldlDefault f pure x) (fmapDefault . g)
+
+bitraverseBy ::
+   (Choice or1, Choice or2) =>
+   (forall α β. (α -> β) -> m α -> m β) -> -- fmap
+   (a -> m b) -> (c -> m d) -> a `or1` c -> m (b `or2` d)
+-- 'a' for 'affine'
+bitraverseBy f g h =
+   match (f makeL . g) (f makeR . h)
+
 
 
 ----- Instances -----
 
 instance Choice Lazy where
-   -- match f g = either f g . getLazy
-   makeL = Lazy . Left
-   makeR = Lazy . Right
 
 instance Choice Strict where
-   -- match f g = either f g . getStrict
    makeL = Strict . strictLeft
    makeR = Strict . strictRight
 
 instance Choice LeftStrict where
-   -- match f g = either f g . getLeftStrict
    makeL = LeftStrict . strictLeft
-   makeR = LeftStrict . Right
 
 instance Choice RightStrict where
-   makeL = RightStrict . Left
    makeR = RightStrict . strictRight
+
+
+--- Choose Instances ---
 
 instance Choice or => Choice (Choose or) where
    match f g = match f g . getChoice
    makeL = Choose . makeL
    makeR = Choose . makeR
 
+instance (Choice or, Eq a, Eq b) => Eq (Choose or a b) where
+   (==) = liftEq2 (==) (==)
+
+instance Choice or => Eq2 (Choose or) where
+   liftEq2 = both False False
+
+instance Choice or => Ord2 (Choose or) where
+   liftCompare2 = both LT GT
 
 instance Choice or => Functor (Choose or c) where
-   fmap f = bind (makeR . f)
+   fmap = fmapDefault
 
 instance Choice or => Bifunctor (Choose or) where
    bimap f g = match (makeL . f) (makeR . g)
    first f = match (makeL . f) makeR
 
 instance (Choice or, Semigroup a, Semigroup b) => Semigroup (Choose or a b) where
-   (<>) =
-      match (first . (<>)) (makeR .: foldl (<>))
+   (<>) = zipLBy (<>) (<>)
 
 instance (Choice or, Monoid a, Semigroup b) => Monoid (Choose or a b) where
    mempty = makeL mempty
 
 instance Choice or => Foldable (Choose or c_) where
-   foldMap = match mempty
+   foldMap = fromR mempty
    foldl = bifoldl pure
-   foldr f = foldl (flip f)
+   foldr = foldl . flip
 
 instance Choice or => Bifoldable (Choose or) where
    bifoldMap = match
-   bifoldl f g z = match (f z) (g z)
+   bifoldl = bifoldlDefault
    bifoldr f g = bifoldl (flip f) (flip g)
 
 instance Choice or => Traversable (Choose or c) where
@@ -128,7 +208,7 @@ instance Choice or => Traversable (Choose or c) where
    -- bitraverse pure
 
 instance Choice or => Bitraversable (Choose or) where
-   bitraverse f g = match (fmap makeL . f) (fmap makeR . g)
+   bitraverse = bitraverseBy fmap
 
 instance Choice or => Applicative (Choose or c) where
    pure = makeR
