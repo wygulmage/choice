@@ -64,13 +64,14 @@ class Choice or where
 
 ----- Types -----
 
-newtype Lazy a b = Lazy{ getLazy :: Either a b }
+-- newtype Lazy a b = Lazy (Either a b)
+type Lazy = Either
 
-newtype Strict a b = Strict{ getStrict :: Either a b }
+newtype Strict a b = Strict (Either a b)
 
-newtype LeftStrict a b = LeftStrict{ getLeftStrict :: Either a b }
+newtype LeftStrict a b = LeftStrict (Either a b )
 
-newtype RightStrict a b = RightStrict{ getRightStrict :: Either a b }
+newtype RightStrict a b = RightStrict (Either a b)
 
 newtype Choose or a b = Choose{ getChoice :: a `or` b }
 
@@ -123,13 +124,16 @@ bind = match makeL
 fmapDefault :: (Choice or1, Choice or2) => (a -> b) -> c `or1` a -> c `or2` b
 fmapDefault f = bind (makeR . f)
 
+firstDefault :: (Choice or1, Choice or2) => (a -> b) -> a `or1` c -> b `or2` c
+firstDefault f = match (makeL . f) makeR
+
 zipLBy ::
    (Choice or1, Choice or2, Choice or3) =>
    (a -> b -> c) -> (d -> d -> d) -> a `or1` d -> b `or2` d -> c `or3` d
 -- If you have a left and a right, return the right.
 -- If you have two lefts, combine them with f.
 -- If you have two rights, combine them in order with g.
-zipLBy f g = match (\ x -> match (makeL . f x) makeR) (makeR .: foldlDefault g)
+zipLBy f g = match (firstDefault . f) (makeR .: foldlDefault g)
 
 zipRBy ::
    (Choice or1, Choice or2, Choice or3) =>
@@ -137,7 +141,7 @@ zipRBy ::
 -- If you have a left and a right, return the left.
 -- If you have two lefts, combine them in order with f.
 -- If you have two rights, combine them with g.
-zipRBy f g = match (\ x -> makeL . bifoldlDefault f pure x) (fmapDefault . g)
+zipRBy f g = match (makeL .: bifoldlDefault f pure) (fmapDefault . g)
 
 bitraverseBy ::
    (Choice or1, Choice or2) =>
@@ -151,7 +155,9 @@ bitraverseBy f g h =
 
 ----- Instances -----
 
-instance Choice Lazy where
+-- instance Choice Lazy
+
+instance Choice Either
 
 instance Choice Strict where
    makeL = Strict . strictLeft
@@ -166,6 +172,8 @@ instance Choice RightStrict where
 
 --- Choose Instances ---
 
+--- Basic Prelude-type classes:
+
 instance Choice or => Choice (Choose or) where
    match f g = match f g . getChoice
    makeL = Choose . makeL
@@ -177,15 +185,13 @@ instance (Choice or, Eq a, Eq b) => Eq (Choose or a b) where
 instance Choice or => Eq2 (Choose or) where
    liftEq2 = both False False
 
+instance (Choice or, Ord a, Ord b) => Ord (Choose or a b) where
+   compare = liftCompare2 compare compare
+
 instance Choice or => Ord2 (Choose or) where
    liftCompare2 = both LT GT
 
-instance Choice or => Functor (Choose or c) where
-   fmap = fmapDefault
-
-instance Choice or => Bifunctor (Choose or) where
-   bimap f g = match (makeL . f) (makeR . g)
-   first f = match (makeL . f) makeR
+--- Semigroup classes:
 
 instance (Choice or, Semigroup a, Semigroup b) => Semigroup (Choose or a b) where
    (<>) = zipLBy (<>) (<>)
@@ -203,16 +209,26 @@ instance Choice or => Bifoldable (Choose or) where
    bifoldl = bifoldlDefault
    bifoldr f g = bifoldl (flip f) (flip g)
 
+--- Functor classes:
+
+instance Choice or => Functor (Choose or c) where
+   fmap = fmapDefault
+
+instance Choice or => Bifunctor (Choose or) where
+   bimap f g = match (makeL . f) (makeR . g)
+   first = firstDefault
+
+instance Choice or => Applicative (Choose or c) where
+   pure = makeR
+   liftA2 f = match (pure . makeL) (fmap . f)
+   -- liftA2 = zipLBy pure
+
+instance Choice or => Monad (Choose or c) where
+   (>>=) = flip bind
+
 instance Choice or => Traversable (Choose or c) where
    traverse f = match (pure . makeL) (fmap makeR . f)
    -- bitraverse pure
 
 instance Choice or => Bitraversable (Choose or) where
    bitraverse = bitraverseBy fmap
-
-instance Choice or => Applicative (Choose or c) where
-   pure = makeR
-   liftA2 f = match (pure . makeL) (fmap . f)
-
-instance Choice or => Monad (Choose or c) where
-   (>>=) = flip bind
