@@ -39,13 +39,13 @@ bimapDefault f g = match (makeL . f) (makeR . g)
 
 Create instances that have the desired strictness properties:
 ```Haskell
-newtype Lazy a b = Lazy{ getLazy :: Either a b }
+type Lazy = Either
 newtype Strict a b = Strict{ getStrict :: Either a b }
 
 instance Choice Lazy where
-   match f g = either f g . getLazy
-   makeL = Lazy . Left
-   makeR = Lazy . Right
+   match = either
+   makeL = Left
+   makeR = Right
 
 instance Choice Strict where
    match f g = either f g . getStrict
