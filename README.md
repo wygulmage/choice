@@ -55,21 +55,21 @@ instance Choice Strict where
 
 Create a wrapper type to derive instances from instances of Choice:
 ```Haskell
-newtype ChoiceT or a b = ChoiceT{ getChoiceT :: a `or` b }
+newtype Choose or a b = Choose{ getChoice :: a `or` b }
 
-instance Choice or => Choice (ChoiceT or) where
-   match f g = match f g . getChoiceT
-   makeL = ChoiceT . makeL
-   makeR = ChoiceT . makeR
+instance Choice or => Choice (Choose or) where
+   match f g = match f g . getChoice
+   makeL = Choose . makeL
+   makeR = Choose . makeR
 
-instance Choice or => Bifunctor (ChoiceT or) where
+instance Choice or => Bifunctor (Choose or) where
   bimap = bimapDefault
 ```
 
 Create usable types for specific applications of the wrapper:
 ```Haskell
-type (||) = ChoiceT Lazy
-type (!!) = ChoiceT Strict
+type (||) = Choose Lazy
+type (!!) = Choose Strict
 ```
 
 Finally, make sure that you aren't exporting any constructors or destructors except those provided by the class (to avoid violation of strictness properties. Yes, you can still use `coerce` to do that.`coerce` is not safe).
