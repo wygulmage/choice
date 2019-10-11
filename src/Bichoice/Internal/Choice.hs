@@ -15,9 +15,21 @@ module Bichoice.Internal.Choice
    )
    where
 
-import Prelude (Eq ((==)), Ord (compare), Bool (..), Ordering (..), flip, seq)
+import Prelude
+   ( Eq ((==)), Bounded (minBound, maxBound), Ord (compare)
+   , Show (showList, showsPrec)
+   , Bool (..), Ordering (..)
+   , flip, seq
+   )
 import Control.Category ((.), id)
-import Data.Functor.Classes (Eq1 (liftEq), Eq2 (liftEq2), Ord1 (liftCompare), Ord2 (liftCompare2), Read1 (liftReadPrec), Read2 (liftReadPrec2), Show2 (liftShowsPrec2), showsUnaryWith)
+import Data.Functor.Classes
+   ( Eq1 (liftEq), Eq2 (liftEq2)
+   , Ord1 (liftCompare), Ord2 (liftCompare2)
+   , Read1 (liftReadPrec), Read2 (liftReadPrec2)
+   , Show1 (liftShowsPrec), Show2 (liftShowsPrec2)
+   , showsUnaryWith
+   , eq1, compare1, showsPrec1
+   )
 -- Semigroup classes
 import Data.Semigroup (Semigroup ((<>)))
 import Data.Monoid (Monoid (mempty))
@@ -37,6 +49,7 @@ import Data.Typeable (Typeable)
 import Data.Either (Either (Left, Right), either)
 import Data.Coerce (Coercible, coerce)
 
+import Text.Read (Read (readPrec))
 
 ----- Class -----
 
@@ -53,20 +66,6 @@ class Choice or where
    match :: (a → c) → (b → c) → a `or` b → c
    default match :: Coercible Either or => (a → c) → (b → c) → a `or` b → c
    match f g = either f g . coerce
-
-   -- changeL :: (a -> a `or` c) -> a `or` c -> a `or` c
-   -- default changeL :: Coercible Either or => (a -> a `or` c) -> a `or` c -> a `or` c
-   -- changeL f = go . (coerce :: a `or` c -> Either a c)
-   --    where
-   --    go (Left x) = f x
-   --    go rx = coerce rx
-
-   -- changeR :: (a -> c `or` a) -> c `or` a -> c `or` a
-   -- default changeR :: Coercible Either or => (a -> c `or` a) -> c `or` a -> c `or` a
-   -- changeR f = go . (coerce :: c `or` a -> Either c a)
-   --    where
-   --    go (Right x) = f x
-   --    go lx = coerce lx
 
 ----- Types -----
 
@@ -195,24 +194,42 @@ instance Choice RightStrict where
 
 --- Choose Instances ---
 
---- Basic Prelude-type classes:
-
 instance Choice or => Choice (Choose or) where
    match f g = match f g . getChoice
    makeL = Choose . makeL
    makeR = Choose . makeR
 
+--- Basic Prelude-type classes:
+
 instance (Choice or, Eq a, Eq b) => Eq (Choose or a b) where
-   (==) = liftEq2 (==) (==)
+   (==) = eq1
+
+instance (Choice or, Eq a) => Eq1 (Choose or a) where
+   liftEq = liftEq2 (==)
 
 instance Choice or => Eq2 (Choose or) where
    liftEq2 = both False False
 
 instance (Choice or, Ord a, Ord b) => Ord (Choose or a b) where
-   compare = liftCompare2 compare compare
+   compare = compare1
+
+instance (Choice or, Ord a) => Ord1 (Choose or a) where
+   liftCompare = liftCompare2 compare
 
 instance Choice or => Ord2 (Choose or) where
+   -- An L value is always less than an R value.
    liftCompare2 = both LT GT
+
+instance (Choice or, Bounded a, Bounded b) => Bounded (Choose or a b) where
+   -- might be more useful if there were separate classes for upper and lower bounds.
+   minBound = makeL minBound
+   maxBound = makeR maxBound
+
+instance (Choice or, Show a, Show b) => Show (Choose or a b) where
+   showsPrec = showsPrec1
+
+instance (Choice or, Show a) => Show1 (Choose or a) where
+   liftShowsPrec = liftShowsPrec2 showsPrec showList
 
 instance Choice or => Show2 (Choose or) where
    liftShowsPrec2 sp1 _ sp2 _ d =
